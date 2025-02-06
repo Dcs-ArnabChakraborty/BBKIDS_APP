@@ -1,74 +1,181 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  StyleSheet,
+  Dimensions,
+  RefreshControl,
+  Alert,
+  useWindowDimensions,
+} from 'react-native';
+import { router } from 'expo-router';
+import { GetBannerData, GetCatagories } from '@/utils/api';
+import Carousel from '../components/Carousel';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+interface Section {
+  name: string;
+  image: string;
+}
 
-export default function HomeScreen() {
+interface BannerData {
+  image: string;
+}
+
+export default function Dashboard() {
+  const [sections, setSections] = useState<Section[]>([]);
+  const [banners, setBanners] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Get current window dimensions
+  const { width } = useWindowDimensions();
+  // Calculate card width dynamically. Adjust the subtraction value as needed for margins.
+  const cardWidth = (width - 36) / 2;
+
+  const fetchData = async () => {
+    try {
+      // Fetch both banners and categories in parallel
+      const [bannerResponse, categoriesResponse] = await Promise.all([
+        GetBannerData(),
+        GetCatagories(),
+      ]);
+
+      if (bannerResponse?.data) {
+        const bannerImages = bannerResponse.data.map(
+          (banner: BannerData) => banner.image
+        );
+        setBanners(bannerImages);
+      }
+
+      if (categoriesResponse?.data) {
+        setSections(categoriesResponse.data);
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(errorMessage);
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      {banners.length > 0 && <Carousel images={banners} />}
+
+      <Text style={styles.title}>Shop by Section</Text>
+
+      <View style={styles.grid}>
+        {sections.length > 0 ? (
+          sections.map((section) => (
+            <TouchableOpacity
+              key={section.name}
+              style={[styles.card, { width: cardWidth }]}
+              onPress={() =>
+                router.push({
+                  pathname: '/section/[name]',
+                  params: { name: section.name },
+                })
+              }
+            >
+              <Image
+                source={{ uri: section.image }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+              <View style={styles.cardContent}>
+                <Text style={styles.sectionName}>{section.name}</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Text style={styles.noCategories}>No categories available</Text>
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 20,
+    color: '#333',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 8,
+    justifyContent: 'space-between',
+  },
+  card: {
+    backgroundColor: '#1F2937',
+    borderRadius: 8,
+    marginBottom: 16,
+    overflow: 'hidden',
+    elevation: 3,
+    // iOS Shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  image: {
+    width: '100%',
+    height: 150,
+  },
+  cardContent: {
+    padding: 12,
+  },
+  sectionName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  noCategories: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#666',
   },
 });

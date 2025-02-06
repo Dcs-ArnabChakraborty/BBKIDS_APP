@@ -1,3 +1,4 @@
+// app/_layout.tsx
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -7,8 +8,9 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { CartProvider } from '@/constants/CartContext';
+import CustomHeader from '@/app/components/CustomHeader';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -28,12 +30,36 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <CartProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen 
+            name="(tabs)" 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader />
+            }} 
+          />
+          <Stack.Screen name="+not-found" />
+          <Stack.Screen 
+            name="checkout" 
+            options={{
+              title: 'Checkout',
+              headerShown: true,
+              presentation: 'modal'
+            }} 
+          />
+          <Stack.Screen 
+            name="search" 
+            options={{
+            headerShown: true,
+            header: () => <CustomHeader />,
+  
+           }} 
+          />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </CartProvider>
   );
 }
