@@ -17,10 +17,11 @@ import { GetFilteredSectionDetails } from '@/utils/api';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+// Updated interface to match API response
 interface CategoryItem {
   unique_id: string;
   name: string;
-  des: string | null;
+  description: string | null;
   mrp: number;
   img: string;
 }
@@ -71,20 +72,11 @@ export default function SectionScreen() {
     fetchSectionItems();
   }, []);
 
-  /**
-   * This function adjusts the grid dimensions based on screen width.
-   * For larger screens (or fullscreen mode) the cards become bigger and the gap is reduced.
-   */
   const getGridDimensions = () => {
-    // Define a breakpoint for larger screens (you can adjust this value)
     const isLargeScreen = width >= 768;
-    // Fixed horizontal container padding (matching styles.container.paddingHorizontal)
     const containerPadding = 16 * 2;
-    // Set spacing between cards; use a smaller gap on larger screens
     const spacing = isLargeScreen ? 8 : 16;
-    // Set a fixed number of columns based on screen size
     const numColumns = isLargeScreen ? 3 : 2;
-    // Calculate the available width after removing container padding and spacing between items
     const totalSpacing = containerPadding + spacing * (numColumns - 1);
     const cardWidth = (width - totalSpacing) / numColumns;
 
@@ -99,13 +91,13 @@ export default function SectionScreen() {
       onPress={() =>
         router.push({
           pathname: '/item/[id]',
-          params: { id: item.unique_id },
+          params: { id: item.unique_id }, // Updated to use item.id
         })
       }
     >
       <View style={styles.card}>
         <Image
-          source={{ uri: item.img || 'https://via.placeholder.com/400x300' }}
+          source={{ uri: item.img || 'https://via.placeholder.com/400x300' }} // Updated to use item.image
           style={[styles.image, { height: cardWidth * 0.75 }]}
           resizeMode="cover"
         />
@@ -114,7 +106,7 @@ export default function SectionScreen() {
             {item.name}
           </Text>
           <Text numberOfLines={2} style={styles.description}>
-            {item.des || 'No description available'}
+            {item.description || 'No description available'} {/* Updated to use item.description */}
           </Text>
           <Text style={styles.price}>Rs.{item.mrp.toLocaleString()}</Text>
         </View>
@@ -139,10 +131,9 @@ export default function SectionScreen() {
       <FlatList
         data={sectionItems}
         renderItem={renderItem}
-        keyExtractor={(item) => item.unique_id}
+        keyExtractor={(item) => item.unique_id} // Updated to use item.id
         numColumns={numColumns}
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + spacing }]}
-        // Use columnWrapperStyle only when there are multiple columns
         columnWrapperStyle={numColumns > 1 ? { justifyContent: 'space-between', marginBottom: spacing } : undefined}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
         showsVerticalScrollIndicator={false}

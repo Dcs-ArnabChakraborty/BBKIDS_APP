@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loginUser } from '../utils/api';
+import { loginUser } from '../../utils/api';
 
 export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);

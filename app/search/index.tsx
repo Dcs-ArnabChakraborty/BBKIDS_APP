@@ -23,10 +23,14 @@ interface SearchItem {
   img: string;
 }
 
+interface SearchResponse {
+  search: SearchItem[];
+}
+
 export default function SearchResultsScreen() {
   const params = useLocalSearchParams();
   const query = params?.query as string;
-  const decodedQuery = decodeURIComponent(query);
+  const decodedQuery = query ? decodeURIComponent(query) : '';
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -36,15 +40,21 @@ export default function SearchResultsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchSearchResults = async () => {
+    if (!decodedQuery) {
+      setError('No search query provided');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
       const response = await GetSearchItems(decodedQuery);
       
-      if (response && response.data && response.data.search) {
+      if (response?.data?.search) {
         setSearchResults(response.data.search);
       } else {
-        throw new Error('No search results found');
+        setSearchResults([]);
       }
     } catch (err) {
       console.error('Search error:', err);
@@ -56,15 +66,13 @@ export default function SearchResultsScreen() {
   };
 
   useEffect(() => {
-    if (query) {
-      fetchSearchResults();
-    }
-  }, [query]);
+    fetchSearchResults();
+  }, [decodedQuery]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     fetchSearchResults();
-  }, [query]);
+  }, [decodedQuery]);
 
   const getGridDimensions = () => {
     const isLargeScreen = width >= 768;
@@ -108,50 +116,43 @@ export default function SearchResultsScreen() {
     </Pressable>
   );
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Text style={[styles.title, { marginTop: Platform.OS === 'ios' ? 0 : 16 }]}>
-          Searching for: {decodedQuery}
-        </Text>
-        <ActivityIndicator size="large" color="#0000ff" style={styles.loader} />
-      </View>
-    );
-  }
+  const ContentView = () => {
+    if (isLoading) {
+      return <ActivityIndicator size="large" color="#0000ff" style={styles.loader} />;
+    }
 
-  if (error) {
+    if (error) {
+      return <Text style={styles.errorText}>{error}</Text>;
+    }
+
+    if (!searchResults || searchResults.length === 0) {
+      return <Text style={styles.noItemsText}>No results found for "{decodedQuery}"</Text>;
+    }
+
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Text style={[styles.title, { marginTop: Platform.OS === 'ios' ? 0 : 16 }]}>
-          Search Results: {decodedQuery}
-        </Text>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
+      <FlatList
+        data={searchResults}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.unique_id}
+        numColumns={numColumns}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + spacing }]}
+        columnWrapperStyle={numColumns > 1 ? { justifyContent: 'space-between', marginBottom: spacing } : undefined}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
+        showsVerticalScrollIndicator={false}
+      />
     );
-  }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Text style={[styles.title, { marginTop: Platform.OS === 'ios' ? 0 : 16 }]}>
         Search Results: {decodedQuery}
       </Text>
-      {searchResults.length === 0 ? (
-        <Text style={styles.noItemsText}>No results found for "{decodedQuery}"</Text>
-      ) : (
-        <FlatList
-          data={searchResults}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.unique_id}
-          numColumns={numColumns}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + spacing }]}
-          columnWrapperStyle={numColumns > 1 ? { justifyContent: 'space-between', marginBottom: spacing } : undefined}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+      <ContentView />
     </View>
   );
 }
+// ... (all imports and component code remain the same until the styles)
 
 const styles = StyleSheet.create({
   container: {

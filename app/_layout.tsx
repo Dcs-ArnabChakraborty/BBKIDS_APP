@@ -1,20 +1,17 @@
-// app/_layout.tsx
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar, Platform, View } from 'react-native';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { CartProvider } from '@/constants/CartContext';
 import CustomHeader from '@/app/components/CustomHeader';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -31,34 +28,74 @@ export default function RootLayout() {
 
   return (
     <CartProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen 
-            name="(tabs)" 
-            options={{ 
-              headerShown: true,
-              header: () => <CustomHeader />
-            }} 
-          />
-          <Stack.Screen name="+not-found" />
-          <Stack.Screen 
-            name="checkout" 
-            options={{
-              title: 'Checkout',
-              headerShown: true,
-              presentation: 'modal'
-            }} 
-          />
-          <Stack.Screen 
-            name="search" 
-            options={{
-            headerShown: true,
-            header: () => <CustomHeader />,
-  
-           }} 
-          />
-        </Stack>
-        <StatusBar style="auto" />
+      <ThemeProvider value={DarkTheme}>
+        <View style={{ flex: 1, backgroundColor: '#000000' }}>
+          <Stack
+            screenOptions={{
+              contentStyle: { backgroundColor: '#000000' },
+              headerStyle: { backgroundColor: '#000000' },
+              headerTintColor: '#FFFFFF',
+            }}>
+            <Stack.Screen 
+              name="(tabs)" 
+              options={{ 
+                headerShown: true,
+                header: () => <CustomHeader />
+              }} 
+            />
+            <Stack.Screen 
+              name="section/[name]" 
+              options={{
+                title: 'Category',
+                headerTitle: 'Fashion Category',
+                headerShown: true,
+                headerTintColor: '#FFFFFF',
+                contentStyle: { backgroundColor: '#000000' }
+              }} 
+            />
+            <Stack.Screen 
+              name="item/[id]" 
+              options={{
+                title: 'Product Details',
+                headerTitle: 'Product Details',
+                headerShown: true,
+                headerTintColor: '#FFFFFF',
+                contentStyle: { backgroundColor: '#000000' }
+              }} 
+            />
+            <Stack.Screen 
+              name="login" 
+              options={{
+                headerTitle: 'Welcome to BBKIDS',
+                headerShown: true,
+                presentation: 'modal',
+                headerTintColor: '#FFFFFF',
+                contentStyle: { backgroundColor: '#000000' }
+              }} 
+            />
+            <Stack.Screen 
+              name="checkout" 
+              options={{
+                title: 'Checkout',
+                headerTitle: 'Checkout',
+                headerShown: true,
+                presentation: 'modal',
+                headerTintColor: '#FFFFFF',
+                contentStyle: { backgroundColor: '#000000' }
+              }} 
+            />
+            <Stack.Screen 
+              name="search" 
+              options={{
+                headerShown: true,
+                headerTitle: 'Search Products',
+                header: () => <CustomHeader />,
+                contentStyle: { backgroundColor: '#000000' }
+              }} 
+            />
+          </Stack>
+          <StatusBar style="light" />
+        </View>
       </ThemeProvider>
     </CartProvider>
   );

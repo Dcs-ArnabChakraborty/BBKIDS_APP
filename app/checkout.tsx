@@ -44,24 +44,29 @@ export default function Checkout() {
 
   useEffect(() => {
     if (cartItems) {
-      const items = JSON.parse(String(cartItems));
-      setSelectedItems(items);
+      try {
+        const items = JSON.parse(String(cartItems));
+        setSelectedItems(items);
 
-      const initialQuantities: { [itemId: string]: { [size: string]: number } } = {};
-      items.forEach((item: CartItem) => {
-        if (item.details?.sizeQuantities) {
-          initialQuantities[item.id] = {};
-          Object.keys(item.details.sizeQuantities).forEach(size => {
-            initialQuantities[item.id][size] = item.details.sizeQuantities[size] || 0;
-          });
-        }
-      });
-      setQuantityInputs(initialQuantities);
+        const initialQuantities: { [itemId: string]: { [size: string]: number } } = {};
+        items.forEach((item: CartItem) => {
+          if (item.details?.sizeQuantities) {
+            initialQuantities[item.id] = {};
+            Object.keys(item.details.sizeQuantities).forEach(size => {
+              initialQuantities[item.id][size] = item.details.sizeQuantities[size] || 0;
+            });
+          }
+        });
+        setQuantityInputs(initialQuantities);
+      } catch (error) {
+        console.error('Error parsing cart items:', error);
+        Alert.alert('Error', 'Failed to load cart items');
+      }
     }
   }, [cartItems]);
 
   const handleQuantityChange = (itemId: string, size: string, value: string) => {
-    const quantity = parseInt(value, 10) || 0;
+    const quantity = Math.max(0, parseInt(value, 10) || 0);
     setQuantityInputs(prev => ({
       ...prev,
       [itemId]: {
@@ -72,68 +77,84 @@ export default function Checkout() {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    
     setIsSubmitting(true);
     setError("");
-
+  
     try {
-      // Check if at least one item has a quantity > 0
       const hasQuantities = selectedItems.some(item =>
         Object.values(quantityInputs[item.id] || {}).some(quantity => quantity > 0)
       );
-
+  
       if (!hasQuantities) {
         throw new Error('Please enter quantity for at least one item');
       }
-
-      // Build the payload
+  
       const payload = selectedItems.map(item => ({
         itemId: item.id,
-        itemName: item.name,
+          selectedColor: item.details?.selectedColor || null,
+          selectedPackSize: item.details?.selectedPackSize || null,
+          selectedShape: item.details?.selectedShape || null,
+          selectedWearType: item.details?.selectedWearType || null,
         sizes: Object.entries(quantityInputs[item.id] || {}).map(([size, quantity]) => ({
           size,
           quantity: quantity || 0,
-          price: item.mrp,
+          // price: item.mrp,
         })),
       }));
-
-      // Retrieve user token from AsyncStorage (similar to localStorage)
+  
       const userToken = await AsyncStorage.getItem('user_session');
       if (!userToken) {
-        throw new Error('No authentication token found');
+        throw new Error('Please login to continue');
       }
-
-      // Replace with your backend URL or ensure the environment variable is configured for React Native
+  
       const backendUrl = process.env.EXPO_PUBLIC_BackendServerURL;
       if (!backendUrl) {
-        throw new Error('Backend URL is not configured');
+        throw new Error('Configuration error. Please contact support.');
       }
-
-      // Submit the order via a POST request
+  
       const response = await fetch(`${backendUrl}/vls2/shopping_views/cart_proceed/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${userToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({data:payload}),
       });
+      
+      if (response.status === 401) {
+        // await AsyncStorage.removeItem("user_session"); // Remove session before redirecting
+        router.replace('/');
+        return;
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
+        throw new Error(errorData?.message || `Server error (${response.status}). Please try again.`);
       }
-
+  
       const data = await response.json();
-      console.log("order submitted", data);
-
-      // Clear the cart and reset the page
+      console.log("Order submitted successfully:", data);
+  
+      // 1. Remove items from the cart
       const selectedIds = selectedItems.map(item => item.id);
       removeMultipleItems(selectedIds);
+  
+      // 2. Clear local state to avoid repopulation on refresh
       setSelectedItems([]);
       setQuantityInputs({});
-      Alert.alert('Success', 'Order placed successfully!', [
-        { text: 'OK', onPress: () => router.push('/(tabs)/cart') }
-      ]);
+  
+      Alert.alert(
+        'Success',
+        'Order placed successfully!',
+        [
+          { 
+            text: 'OK', 
+            onPress: () => router.push('/(tabs)/cart')
+          }
+        ]
+      );
 
     } catch (error) {
       console.error('Submission error:', error);
@@ -144,6 +165,7 @@ export default function Checkout() {
       setIsSubmitting(false);
     }
   };
+  
 
   if (selectedItems.length === 0) {
     return (
@@ -158,9 +180,9 @@ export default function Checkout() {
     );
   }
 
-   return (
+  return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Checkout</Text>
 
         {error ? (
@@ -203,8 +225,13 @@ export default function Checkout() {
                   </View>
                 </View>
 
-                {item.details.sizeQuantities && Object.keys(item.details.sizeQuantities).length > 0 && (
-                  <ScrollView horizontal style={styles.tableContainer}>
+                {item.details.sizeQuantities && 
+                 Object.keys(item.details.sizeQuantities).length > 0 && (
+                  <ScrollView 
+                    horizontal 
+                    style={styles.tableContainer}
+                    showsHorizontalScrollIndicator={false}
+                  >
                     <View>
                       <View style={styles.tableHeader}>
                         {Object.keys(item.details.sizeQuantities).map((size) => (
@@ -223,6 +250,7 @@ export default function Checkout() {
                               onChangeText={(value) =>
                                 handleQuantityChange(item.id, size, value)
                               }
+                              maxLength={5}
                             />
                           </View>
                         ))}
@@ -239,6 +267,7 @@ export default function Checkout() {
           style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting}
+          activeOpacity={0.7}
         >
           <Text style={styles.submitButtonText}>
             {isSubmitting ? 'Processing...' : 'Confirm Order'}
@@ -263,6 +292,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
+    color: '#111827',
   },
   emptyContainer: {
     flex: 1,
@@ -274,6 +304,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
+    color: '#111827',
   },
   emptySubtext: {
     fontSize: 14,
@@ -295,6 +326,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   itemName: {
     fontSize: 18,
@@ -352,6 +391,8 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     backgroundColor: '#1F2937',
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
   },
   cell: {
     padding: 8,
@@ -374,6 +415,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 16,
+    marginBottom: 32,
   },
   submitButtonDisabled: {
     opacity: 0.7,

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "nativetry",
+    "name": "BBKIDS",
     "slug": "nativetry",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,9 +13,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.arnab404.nativetry",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "INTERNET"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +41,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "bf9ab633-0284-456a-949b-a2d599e01d1b"
+      }
+    },
+    "owner": "blackjack123"
   }
 }

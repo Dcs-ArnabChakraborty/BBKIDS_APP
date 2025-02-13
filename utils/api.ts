@@ -2,21 +2,28 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 
 const BASE_URL = process.env.EXPO_PUBLIC_BackendServerURL;
+console.log('Backend Server URL:', BASE_URL);
 
 export const loginUser = async (email: string, password: string) => {
-  const response = await fetch(`${BASE_URL}/vls2/shopping_views/loging_url/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_name: email, password }),
-  });
-  
-  if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.message || 'Login failed');
+  try {
+    const response = await fetch(`${BASE_URL}/vls2/shopping_views/loging_url/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_name: email, password }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Login failed');
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Login API call failed:', error);
+    throw error;
   }
-  
-  return response.json();
 };
+
 
 export const GetBannerData = async () => {
   const token = await AsyncStorage.getItem('user_session');
@@ -28,6 +35,7 @@ export const GetBannerData = async () => {
   });
   
   if (response.status === 401) {
+    // await AsyncStorage.removeItem("user_session"); // Remove session before redirecting
     router.replace('/');
     return;
   }
@@ -50,6 +58,7 @@ export const GetCatagories = async () => {
   });
   
   if (response.status === 401) {
+    // await AsyncStorage.removeItem("user_session"); // Remove session before redirecting
     router.replace('/');
     return;
   }
@@ -63,48 +72,64 @@ export const GetCatagories = async () => {
 };
 
 export const GetFilteredSectionDetails = async (filterCriteria: { category: string }) => {
-  const token = await AsyncStorage.getItem('user_session');
-  const response = await fetch(`${BASE_URL}/vls2/shopping_views/category_item_url/`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Token ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(filterCriteria),
-  });
-  
-  if (response.status === 401) {
-    router.replace('/');
-    return;
-  }
+  try {
+    const token = await AsyncStorage.getItem('user_session');
+    const response = await fetch(`${BASE_URL}/vls2/shopping_views/category_item_url/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(filterCriteria),
+    });
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch filtered section details');
+    if (response.status === 401) {
+      // await AsyncStorage.removeItem("user_session"); // Remove session before redirecting
+      router.replace('/');
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch filtered section details');
+    }
+
+    const data = await response.json();
+    console.log('API Response:', data); // Log the API response
+    return data;
+  } catch (error) {
+    console.error('Error fetching filtered section details:', error);
+    throw error;
   }
-  
-  return await response.json();
 };
 
 export const GetSingleItems = async ({ id }: { id: string }) => {
-  const token = await AsyncStorage.getItem('user_session');
-  const response = await fetch(`${BASE_URL}/vls2/shopping_views/single_item_view/?id=${id}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Token ${token}`,
-    },
-  });
-  
-  if (response.status === 401) {
-    router.replace('/');
-    return;
-  }
+  try {
+    const token = await AsyncStorage.getItem('user_session');
+    const response = await fetch(`${BASE_URL}/vls2/shopping_views/single_item_view/?id=${id}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Token ${token}`,
+      },
+    });
 
-  if (!response.ok) {
+    if (response.status === 401) {
+      // await AsyncStorage.removeItem("user_session"); // Remove session before redirecting
+      router.replace('/');
+      return;
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message);
+    }
+
     const data = await response.json();
-    throw new Error(data.message);
+    console.log('API Response 11:', data); // Log the API response
+    return data;
+  } catch (error) {
+    console.error('Error fetching single item:', error);
+    throw error;
   }
-
-  return response.json();
 };
 
 export const AddToCart = async (dataToSend: any) => {
@@ -119,6 +144,7 @@ export const AddToCart = async (dataToSend: any) => {
   });
   
   if (response.status === 401) {
+    // await AsyncStorage.removeItem("user_session"); // Remove session before redirecting
     router.replace('/');
     return;
   }
@@ -144,6 +170,7 @@ export const submitCartToAPI = async (cartData: any) => {
     });
     
     if (response.status === 401) {
+      // await AsyncStorage.removeItem("user_session"); // Remove session before redirecting
       router.replace('/');
       return;
     }
@@ -161,26 +188,68 @@ export const submitCartToAPI = async (cartData: any) => {
 };
 
 export const GetSearchItems = async (query: string) => {
-  const token = await AsyncStorage.getItem('user_session');
-  const response = await fetch(`${BASE_URL}/vls2/shopping_views/search/`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Token ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ search_para: query }),
-  });
+  try {
+    const token = await AsyncStorage.getItem('user_session');
+    
+    const response = await fetch(`${BASE_URL}/vls2/shopping_views/search/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ search_para: query }),
+    });
 
-  if (response.status === 401) {
-    router.replace('/');
-    return;
-  }
+    // Log the raw response status and headers
+    console.log('Search API Response Status:', response.status);
+    console.log('Search API Response Headers:', Object.fromEntries(response.headers.entries()));
 
-  if (!response.ok) {
+    if (response.status === 401) {
+      // await AsyncStorage.removeItem("user_session"); // Remove session before redirecting
+      router.replace('/');
+      return null;
+    }
+
     const data = await response.json();
-    throw new Error(data.message || 'Failed to fetch search results');
-  }
+    console.log('Search API Response Data:', data);
 
-  const data = await response.json();
-  return { data }; // Match the structure of GetFilteredSectionDetails
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to fetch search results');
+    }
+
+    return { data };
+  } catch (error) {
+    console.error('Search API Error:', error);
+    throw error;
+  }
 };
+export const GetAllOrders = async () => {
+  try {
+    const token = await AsyncStorage.getItem('user_session');
+    const response = await fetch(`${BASE_URL}/vls2/shopping_views/all_order/`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Token ${token}`,
+      },
+    });
+
+    if (response.status === 401) {
+      // await AsyncStorage.removeItem("user_session"); // Remove session before redirecting
+      router.replace('/');
+      return;
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message);
+    }
+
+    const data = await response.json();
+    console.log('API Response all orders:', data); // Log the API response
+    return data;
+  } catch (error) {
+    console.error('Error fetching single item:', error);
+    throw error;
+  }
+};
+// http://192.168.0.162:8000/vls2/shopping_views/all_order/

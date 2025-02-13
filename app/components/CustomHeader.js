@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router'; // Change to use expo-router
+import { router } from 'expo-router';
+import Entypo from '@expo/vector-icons/Entypo';
+import Feather from '@expo/vector-icons/Feather';
 
 const CustomHeader = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -18,9 +20,8 @@ const CustomHeader = () => {
 
   const handleSearchSubmit = () => {
     if (searchQuery.trim()) {
-      // Use router.push instead of navigation.navigate
       router.push({
-        pathname: '/search',
+        pathname: 'search',
         params: { query: searchQuery.trim() }
       });
       setSearchQuery('');
@@ -46,22 +47,26 @@ const CustomHeader = () => {
       <TouchableOpacity onPress={handleHomePress}>
         <Text style={styles.title}>BBKIDS</Text>
       </TouchableOpacity>
+      
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search..."
-          placeholderTextColor="#ccc"
           value={searchQuery}
           onChangeText={setSearchQuery}
+          placeholder="Search..."
+          placeholderTextColor="#999"
           onSubmitEditing={handleSearchSubmit}
-          returnKeyType="search"
         />
         <TouchableOpacity style={styles.searchButton} onPress={handleSearchSubmit}>
-          <Text style={styles.searchButtonText}>Search</Text>
+          <Feather name="search" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
+
       <TouchableOpacity style={styles.authButton} onPress={handleAuthPress}>
-        <Text style={styles.authButtonText}>{isLoggedIn ? 'Logout' : 'Login'}</Text>
+        {isLoggedIn ? 
+          <Entypo name="log-out" size={24} color="#fff" /> :
+          <Text style={styles.authButtonText}>Login</Text>
+        }
       </TouchableOpacity>
     </View>
   );
@@ -85,7 +90,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 10,
+    marginHorizontal: 30,
   },
   searchInput: {
     flex: 1,
